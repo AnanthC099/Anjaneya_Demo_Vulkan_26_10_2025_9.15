@@ -61,64 +61,64 @@ void BeginScene0Audio(void);
 
 static void ResetOffscreenTargets(void)
 {
-    for (uint32_t i = 0; i < 3; ++i)
+    memset(gOffscreenTargets, 0, sizeof(gOffscreenTargets));
+}
+
+static void DestroySingleOffscreenTarget(VkDevice device, OffscreenTarget* target)
+{
+    if (target->framebuffer != VK_NULL_HANDLE)
     {
-        gOffscreenTargets[i].colorImage = VK_NULL_HANDLE;
-        gOffscreenTargets[i].colorMemory = VK_NULL_HANDLE;
-        gOffscreenTargets[i].colorView = VK_NULL_HANDLE;
-        gOffscreenTargets[i].depthImage = VK_NULL_HANDLE;
-        gOffscreenTargets[i].depthMemory = VK_NULL_HANDLE;
-        gOffscreenTargets[i].depthView = VK_NULL_HANDLE;
-        gOffscreenTargets[i].framebuffer = VK_NULL_HANDLE;
+        vkDestroyFramebuffer(device, target->framebuffer, NULL);
+        target->framebuffer = VK_NULL_HANDLE;
+    }
+
+    if (target->colorView != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(device, target->colorView, NULL);
+        target->colorView = VK_NULL_HANDLE;
+    }
+
+    if (target->depthView != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(device, target->depthView, NULL);
+        target->depthView = VK_NULL_HANDLE;
+    }
+
+    if (target->colorImage != VK_NULL_HANDLE)
+    {
+        vkDestroyImage(device, target->colorImage, NULL);
+        target->colorImage = VK_NULL_HANDLE;
+    }
+
+    if (target->colorMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(device, target->colorMemory, NULL);
+        target->colorMemory = VK_NULL_HANDLE;
+    }
+
+    if (target->depthImage != VK_NULL_HANDLE)
+    {
+        vkDestroyImage(device, target->depthImage, NULL);
+        target->depthImage = VK_NULL_HANDLE;
+    }
+
+    if (target->depthMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(device, target->depthMemory, NULL);
+        target->depthMemory = VK_NULL_HANDLE;
     }
 }
 
 static void DestroyOffscreenTargets(void)
 {
-    for (uint32_t i = 0; i < 3; ++i)
+    if (gCtx_Switcher.vkDevice == VK_NULL_HANDLE)
     {
-        if (gOffscreenTargets[i].framebuffer != VK_NULL_HANDLE)
-        {
-            vkDestroyFramebuffer(gCtx_Switcher.vkDevice, gOffscreenTargets[i].framebuffer, NULL);
-            gOffscreenTargets[i].framebuffer = VK_NULL_HANDLE;
-        }
-
-        if (gOffscreenTargets[i].colorView != VK_NULL_HANDLE)
-        {
-            vkDestroyImageView(gCtx_Switcher.vkDevice, gOffscreenTargets[i].colorView, NULL);
-            gOffscreenTargets[i].colorView = VK_NULL_HANDLE;
-        }
-
-        if (gOffscreenTargets[i].depthView != VK_NULL_HANDLE)
-        {
-            vkDestroyImageView(gCtx_Switcher.vkDevice, gOffscreenTargets[i].depthView, NULL);
-            gOffscreenTargets[i].depthView = VK_NULL_HANDLE;
-        }
-
-        if (gOffscreenTargets[i].colorImage != VK_NULL_HANDLE)
-        {
-            vkDestroyImage(gCtx_Switcher.vkDevice, gOffscreenTargets[i].colorImage, NULL);
-            gOffscreenTargets[i].colorImage = VK_NULL_HANDLE;
-        }
-
-        if (gOffscreenTargets[i].colorMemory != VK_NULL_HANDLE)
-        {
-            vkFreeMemory(gCtx_Switcher.vkDevice, gOffscreenTargets[i].colorMemory, NULL);
-            gOffscreenTargets[i].colorMemory = VK_NULL_HANDLE;
-        }
-
-        if (gOffscreenTargets[i].depthImage != VK_NULL_HANDLE)
-        {
-            vkDestroyImage(gCtx_Switcher.vkDevice, gOffscreenTargets[i].depthImage, NULL);
-            gOffscreenTargets[i].depthImage = VK_NULL_HANDLE;
-        }
-
-        if (gOffscreenTargets[i].depthMemory != VK_NULL_HANDLE)
-        {
-            vkFreeMemory(gCtx_Switcher.vkDevice, gOffscreenTargets[i].depthMemory, NULL);
-            gOffscreenTargets[i].depthMemory = VK_NULL_HANDLE;
-        }
+        ResetOffscreenTargets();
+        return;
     }
+
+    for (uint32_t i = 0; i < 3; ++i)
+        DestroySingleOffscreenTarget(gCtx_Switcher.vkDevice, &gOffscreenTargets[i]);
 }
 
 static void DestroyCompositeResources(void)
