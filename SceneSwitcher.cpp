@@ -4629,7 +4629,7 @@ VkResult createVertexBuffer(void)
     };
 
     float cubeTexcoords[] =
-	{
+        {
 		// front
 		// triangle one
 		1.0f, 1.0f, // top-right of front
@@ -4695,9 +4695,9 @@ VkResult createVertexBuffer(void)
 		1.0f, 0.0f, // bottom-right of bottom
 		0.0f, 1.0f, // top-left of bottom
 		0.0f, 0.0f, // bottom-left of bottom
-	};
-    
-    //VERTEX POSITION BUFFER 
+        };
+
+    //VERTEX POSITION BUFFER
     //#4 memset the global strucure variable
     memset((void*)&gCtx_Switcher.vertexData_position, 0, sizeof(GlobalContext_VertexData));
     
@@ -4889,9 +4889,9 @@ VkResult createVertexBuffer(void)
    
     //#12
     memcpy(data, cubeTexcoords, sizeof(cubeTexcoords));
-    
+
     vkUnmapMemory(gCtx_Switcher.vkDevice, gCtx_Switcher.vertexData_texcoord.vkDeviceMemory);
-   
+
     return (vkResult);
 }
 
@@ -7191,15 +7191,23 @@ VkResult buildCommandBuffers(void)
             break;
         }
 
-        if (baseWeight < 0.0f) baseWeight = 0.0f;
-        if (baseWeight > 1.0f) baseWeight = 1.0f;
-        float baseBlend[4] = { baseWeight, baseWeight, baseWeight, baseWeight };
-        VkDescriptorSet baseSet = VK_NULL_HANDLE;
-        if (baseScene != UINT32_MAX)
+        BOOL scene12DoubleExposure = (gCtx_Switcher.gScene12CrossfadeActive &&
+                                      baseScene == 2 &&
+                                      overlayScene == 1);
+
+        if (scene12DoubleExposure)
         {
-            baseSet = gCompositeDescriptorSet_array[baseScene];
+            /* Maintain Scene 2 at full intensity so Scene 1 fades out as a
+               double exposure overlay instead of a soft-focus transition. */
+            baseWeight = 1.0f;
         }
 
+        if (baseWeight < 0.0f) baseWeight = 0.0f;
+        if (baseWeight > 1.0f) baseWeight = 1.0f;
+        VkDescriptorSet baseSet = (baseScene != UINT32_MAX) ?
+                                  gCompositeDescriptorSet_array[baseScene] : VK_NULL_HANDLE;
+
+        float baseBlend[4] = { baseWeight, baseWeight, baseWeight, baseWeight };
         BOOL drawBaseScene = (baseSet != VK_NULL_HANDLE);
         if (drawBaseScene)
         {
@@ -7237,23 +7245,20 @@ VkResult buildCommandBuffers(void)
             if (weight < 0.0f) weight = 0.0f;
             if (weight > 1.0f) weight = 1.0f;
 
-            if (weight > 0.0f)
+            VkDescriptorSet overlaySet = gCompositeDescriptorSet_array[overlayScene];
+            if (weight > 0.0f && overlaySet != VK_NULL_HANDLE)
             {
-                VkDescriptorSet overlaySet = gCompositeDescriptorSet_array[overlayScene];
-                if (overlaySet != VK_NULL_HANDLE)
-                {
-                    float overlayBlend[4] = { weight, weight, weight, weight };
-                    vkCmdSetBlendConstants(compositeCb, overlayBlend);
-                    vkCmdBindDescriptorSets(compositeCb,
-                                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                            gCtx_Switcher.vkPipelineLayout,
-                                            0,
-                                            1,
-                                            &overlaySet,
-                                            0,
-                                            NULL);
-                    vkCmdDraw(compositeCb, 6, 1, 0, 0);
-                }
+                float overlayBlend[4] = { weight, weight, weight, weight };
+                vkCmdSetBlendConstants(compositeCb, overlayBlend);
+                vkCmdBindDescriptorSets(compositeCb,
+                                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                        gCtx_Switcher.vkPipelineLayout,
+                                        0,
+                                        1,
+                                        &overlaySet,
+                                        0,
+                                        NULL);
+                vkCmdDraw(compositeCb, 6, 1, 0, 0);
             }
         }
 
